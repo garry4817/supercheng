@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世暘工廠</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        ul {
+            list-style-type: disc;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.running {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.idle {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>世暘工廠包裝dashboard</h1>
+    <div id="error-message"></div>
+    
+    <table>
+        <tr>
+            <th>區塊A:<br>即時狀態</th>
+            <th>區塊B:<br>今日生產數據</th>
+            <th>區塊C:<br>能耗與稼動率</th>
+        </tr>
+        <tr>
+            <td>
+                <ul>
+                    <li>目前狀態：運作中</li>
+                    <li>當前功率：1000 kW</li>
+                    <li>當前電壓：1000 V</li>
+                    <li>中斷警示：15 min</li>
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    <li>今日總產量：1000 袋</li>
+                    <li>平均速度：1000 袋/秒</li>
+                    <li>今日中斷次數：1 次</li>
+                    <li>累積中斷時間：15 min</li>
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    <li>今日總用電：1000 kWh</li>
+                    <li>設備稼動率：1000 kW</li>
+                    <li>當前電壓：1000 V</li>
+                    <li>中斷警示：15 min</li>
+                </ul>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        // API 基礎 URL
+        const API_URL = 'http://localhost:5000/api';
+        
+        // 自動刷新間隔 (毫秒)
+        const REFRESH_INTERVAL = 2000; // 2秒刷新一次
+        
+        // 獲取數據並更新 UI
+        async function fetchData() {
+            try {
+                const response = await fetch(`${API_URL}/data`);
+                
+                if (!response.ok) {
+                    throw new Error('伺服器錯誤: ' + response.status);
+                }
+                
+                const data = await response.json();
+                updateUI(data);
+                clearError();
+                
+            } catch (error) {
+                showError('無法連接伺服器: ' + error.message);
+                console.error('Error fetching data:', error);
+            }
+        }
+        
+        // 更新 UI
+        function updateUI(data) {
+            // 區塊 A: 即時狀態
+            document.getElementById('status').textContent = 
+                `目前狀態：${data.Running ? '運作中' : '停止'}`;
+            
+            document.getElementById('power').textContent = 
+                `當前功率：${data.power.toFixed(2)} kW`;
+            
+            document.getElementById('voltage').textContent = 
+                `當前電壓：${data.Voltage.toFixed(2)} V`;
+            
+            document.getElementById('idle-warning').textContent = 
+                `中斷警示：${data.idle ? '⚠️ 停止中' : '✓ 正常'}`;
+            
+            // 區塊 B: 今日生產數據
+            document.getElementById('cargo').textContent = 
+                `今日總產量：${data.cargo.toFixed(2)} 袋`;
+            
+            document.getElementById('avg-production').textContent = 
+                `平均速度：${data.avg_production.toFixed(2)} 袋/秒`;
+            
+            document.getElementById('idle-times').textContent = 
+                `今日中斷次數：${data.idle_times} 次`;
+            
+            document.getElementById('idle-time').textContent = 
+                `累積中斷時間：${data.idle_time} min`;
+            
+            // 區塊 C: 能耗與稼動率
+            document.getElementById('kwh').textContent = 
+                `今日總用電：${data.kwh.toFixed(2)} kWh`;
+            
+            document.getElementById('wh-per-bag').textContent = 
+                `每袋能耗：${data.wh_per_bag.toFixed(2)} Wh`;
+            
+            document.getElementById('current').textContent = 
+                `當前電流：${data.current.toFixed(2)} A`;
+            
+            document.getElementById('powersec').textContent = 
+                `瞬時功率：${data.powersec.toFixed(2)} W`;
+        }
+        
+        // 顯示錯誤信息
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        // 清除錯誤信息
+        function clearError() {
+            document.getElementById('error-message').innerHTML = '';
+        }
+        
+        // 頁面加載時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 立即獲取一次數據
+            fetchData();
+            
+            // 設置自動刷新
+            setInterval(fetchData, REFRESH_INTERVAL);
+        });
+    </script>
+</body>
+</html>
